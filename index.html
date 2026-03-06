@@ -128,7 +128,7 @@ async function analyzeFood(base64Image, apiKey) {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 1000,
       messages: [{
         role: "user",
@@ -483,7 +483,7 @@ function App() {
         {showCamera && (
           <div style={{position:"fixed",inset:0,background:"#0a0a0a",zIndex:300,display:"flex",flexDirection:"column",animation:"fadeIn 0.2s ease"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
-              <button onClick={closeCamera} style={{background:"none",border:"none",color:"rgba(255,255,255,0.6)",fontSize:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>Cancel</button>
+              <button onClick={closeCamera} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"50%",width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"rgba(255,255,255,0.6)",fontSize:18,transition:"all 0.2s"}}>✕</button>
               <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#fff"}}>{analyzing?"Analyzing...":aiResults?"Results":"Snap Your Meal"}</span>
               <div style={{width:50}} />
             </div>
