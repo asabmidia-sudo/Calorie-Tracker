@@ -220,6 +220,8 @@ function App() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editFields, setEditFields] = useState({name:"",calories:"",protein:"",carbs:"",fat:""});
   const searchRef = useRef(null);
   const [selectedCat, setSelectedCat] = useState("All");
   const [showCamera, setShowCamera] = useState(false);
@@ -298,7 +300,18 @@ function App() {
 
   const addEntry = food => { setEntries(p=>[...p,{...food,id:uid(),date:selectedDate,time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]); setShowAdd(false); setSearch(""); };
   const addCustom = () => { if(!customName||!customCal) return; addEntry({name:customName,calories:Math.round(Number(customCal)),protein:Math.round(Number(customProtein)||0),carbs:Math.round(Number(customCarbs)||0),fat:Math.round(Number(customFat)||0)}); setCustomName("");setCustomCal("");setCustomProtein("");setCustomCarbs("");setCustomFat(""); };
-  const removeEntry = id => { setEntries(p=>p.filter(e=>e.id!==id)); setDeleteConfirm(null); };
+  const removeEntry = id => { setEntries(p=>p.filter(e=>e.id!==id)); setDeleteConfirm(null); setEditingEntry(null); };
+
+  const startEdit = (entry) => {
+    setEditingEntry(entry.id);
+    setEditFields({name:entry.name,calories:String(entry.calories),protein:String(entry.protein||0),carbs:String(entry.carbs||0),fat:String(entry.fat||0)});
+    setDeleteConfirm(null);
+  };
+  const saveEdit = () => {
+    if(!editingEntry) return;
+    setEntries(p=>p.map(e=>e.id===editingEntry?{...e,name:editFields.name||e.name,calories:Math.round(Number(editFields.calories))||e.calories,protein:Math.round(Number(editFields.protein))||0,carbs:Math.round(Number(editFields.carbs))||0,fat:Math.round(Number(editFields.fat))||0}:e));
+    setEditingEntry(null);
+  };
 
   const filtered = FOOD_SUGGESTIONS.filter(f=>{const ms=f.name.toLowerCase().includes(search.toLowerCase()); const mc=selectedCat==="All"||f.cat===selectedCat; return ms&&mc;});
   const CATEGORIES = ["All","Rice","Ulam","Sabaw","Inihaw","Prito","Guisado","Pancit","Silog","Merienda","Drinks","Extras"];
@@ -422,16 +435,46 @@ function App() {
           </div>
           {todayEntries.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:"rgba(255,255,255,0.15)",fontSize:13}}>No entries yet. Tap + to add food or snap a photo.</div>:
             todayEntries.map((e,i)=>(
-              <div key={e.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",marginBottom:8,background:"rgba(255,255,255,0.03)",borderRadius:14,border:"1px solid rgba(255,255,255,0.05)",animation:`fadeSlideIn 0.3s ease ${i*0.05}s both`}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:500,color:"rgba(255,255,255,0.85)"}}>{e.name}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.25)",marginTop:2}}>{e.time} · P:{e.protein||0}g · C:{e.carbs||0}g · F:{e.fat||0}g</div>
+              <div key={e.id} style={{marginBottom:8,background:"rgba(255,255,255,0.03)",borderRadius:14,border:editingEntry===e.id?"1px solid rgba(184,242,161,0.2)":"1px solid rgba(255,255,255,0.05)",animation:`fadeSlideIn 0.3s ease ${i*0.05}s both`,overflow:"hidden"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",cursor:"pointer"}} onClick={()=>{if(editingEntry===e.id){setEditingEntry(null);}else{startEdit(e);}}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:14,fontWeight:500,color:"rgba(255,255,255,0.85)"}}>{e.name}</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.25)",marginTop:2}}>{e.time} · P:{e.protein||0}g · C:{e.carbs||0}g · F:{e.fat||0}g</div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#b8f2a1"}}>{e.calories}</span>
+                    <span style={{color:editingEntry===e.id?"rgba(184,242,161,0.5)":"rgba(255,255,255,0.15)",fontSize:12,transition:"color 0.2s"}}>{editingEntry===e.id?"▲":"▼"}</span>
+                  </div>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#b8f2a1"}}>{e.calories}</span>
-                  {deleteConfirm===e.id?<button onClick={()=>removeEntry(e.id)} style={{background:"#ff6b6b",border:"none",borderRadius:8,color:"#fff",fontSize:10,padding:"4px 10px",cursor:"pointer",fontWeight:600,fontFamily:"'DM Sans',sans-serif"}}>Delete?</button>
-                  :<button onClick={()=>setDeleteConfirm(e.id)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.15)",fontSize:16,cursor:"pointer",padding:"2px 6px"}}>×</button>}
-                </div>
+                {editingEntry===e.id && (
+                  <div style={{padding:"0 16px 14px",animation:"fadeIn 0.2s ease"}}>
+                    <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:12}}>
+                      <input value={editFields.name} onChange={ev=>setEditFields(p=>({...p,name:ev.target.value}))} placeholder="Food name" style={{...inputStyle,marginBottom:8,fontSize:13}} />
+                      <div style={{display:"flex",gap:6,marginBottom:8}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:9,color:"#b8f2a1",letterSpacing:1,marginBottom:3}}>KCAL</div>
+                          <input type="number" value={editFields.calories} onChange={ev=>setEditFields(p=>({...p,calories:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                        </div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:9,color:"#a1d2f2",letterSpacing:1,marginBottom:3}}>PROTEIN</div>
+                          <input type="number" value={editFields.protein} onChange={ev=>setEditFields(p=>({...p,protein:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                        </div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:9,color:"#f2d1a1",letterSpacing:1,marginBottom:3}}>CARBS</div>
+                          <input type="number" value={editFields.carbs} onChange={ev=>setEditFields(p=>({...p,carbs:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                        </div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:9,color:"#f2a1c8",letterSpacing:1,marginBottom:3}}>FAT</div>
+                          <input type="number" value={editFields.fat} onChange={ev=>setEditFields(p=>({...p,fat:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>removeEntry(e.id)} style={{...btnStyle,flex:1,background:"rgba(255,107,107,0.1)",color:"#ff6b6b",border:"1px solid rgba(255,107,107,0.2)",padding:"10px 12px",fontSize:12}}>Delete</button>
+                        <button onClick={saveEdit} style={{...btnStyle,flex:2,background:"linear-gradient(135deg,#b8f2a1,#7ecba1)",color:"#0a0a0a",padding:"10px 12px",fontSize:12}}>Save Changes</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>))}
         </div>
 
@@ -482,10 +525,8 @@ function App() {
         {/* Camera modal */}
         {showCamera && (
           <div style={{position:"fixed",inset:0,background:"#0a0a0a",zIndex:300,display:"flex",flexDirection:"column",animation:"fadeIn 0.2s ease"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
-              <button onClick={closeCamera} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"50%",width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"rgba(255,255,255,0.6)",fontSize:18,transition:"all 0.2s"}}>✕</button>
+            <div style={{display:"flex",justifyContent:"center",alignItems:"center",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
               <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#fff"}}>{analyzing?"Analyzing...":aiResults?"Results":"Snap Your Meal"}</span>
-              <div style={{width:50}} />
             </div>
             <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
               {!capturedImage?<>
@@ -504,41 +545,51 @@ function App() {
               </>}
             </div>
             <div style={{padding:"20px 24px 36px",background:"linear-gradient(to top,#0a0a0a,rgba(10,10,10,0.95))",flexShrink:0}}>
-              {!capturedImage&&!aiResults&&<div style={{display:"flex",justifyContent:"center",gap:20,alignItems:"center"}}>
-                <button onClick={()=>{stopCamera();fileInputRef.current?.click();}} style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                </button>
-                <button onClick={capturePhoto} style={{width:72,height:72,borderRadius:"50%",background:"none",border:"3px solid #b8f2a1",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
-                  <div style={{width:58,height:58,borderRadius:"50%",background:"#b8f2a1"}} />
-                </button>
-                <div style={{width:44,height:44}} />
+              {!capturedImage&&!aiResults&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
+                <div style={{display:"flex",justifyContent:"center",gap:20,alignItems:"center"}}>
+                  <button onClick={()=>{stopCamera();fileInputRef.current?.click();}} style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  </button>
+                  <button onClick={capturePhoto} style={{width:72,height:72,borderRadius:"50%",background:"none",border:"3px solid #b8f2a1",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                    <div style={{width:58,height:58,borderRadius:"50%",background:"#b8f2a1"}} />
+                  </button>
+                  <div style={{width:44,height:44}} />
+                </div>
+                <button onClick={closeCamera} style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.5)",fontSize:20,transition:"all 0.2s"}}>✕</button>
               </div>}
-              {capturedImage&&!aiResults&&!analyzing&&<div>
-                {aiError&&<div style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.2)",borderRadius:12,padding:"12px 16px",textAlign:"center",fontSize:13,color:"#ff6b6b",marginBottom:12}}>{aiError}</div>}
-                <div style={{display:"flex",gap:12}}>
+              {capturedImage&&!aiResults&&!analyzing&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14}}>
+                {aiError&&<div style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.2)",borderRadius:12,padding:"12px 16px",textAlign:"center",fontSize:13,color:"#ff6b6b",width:"100%"}}>{aiError}</div>}
+                <div style={{display:"flex",gap:10,width:"100%"}}>
                   <button onClick={()=>{setCapturedImage(null);setAiError(null);startCamera();}} style={{...btnStyle,flex:1,background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.6)"}}>Retake</button>
                   <button onClick={analyzePhoto} style={{...btnStyle,flex:2,background:"linear-gradient(135deg,#b8f2a1,#7ecba1)",color:"#0a0a0a",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Identify Food
                   </button>
                 </div>
+                <button onClick={closeCamera} style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.5)",fontSize:20,transition:"all 0.2s"}}>✕</button>
               </div>}
-              {aiResults&&aiResults.length>0&&<div>
-                <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Detected {aiResults.length} item{aiResults.length!==1?"s":""}</div>
-                <div style={{maxHeight:200,overflow:"auto",marginBottom:14}}>
-                  {aiResults.map((item,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px",marginBottom:6,background:"rgba(184,242,161,0.06)",border:"1px solid rgba(184,242,161,0.12)",borderRadius:12,animation:`fadeSlideIn 0.3s ease ${i*0.1}s both`}}>
-                    <div style={{flex:1}}><div style={{fontSize:14,fontWeight:500,color:"#fff"}}>{item.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:2}}>P:{item.protein||0}g · C:{item.carbs||0}g · F:{item.fat||0}g</div></div>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#b8f2a1"}}>{Math.round(item.calories)}</span>
-                      <button onClick={()=>addAiItem(item)} style={{background:"rgba(184,242,161,0.15)",border:"1px solid rgba(184,242,161,0.25)",borderRadius:8,color:"#b8f2a1",fontSize:16,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-                    </div>
-                  </div>)}
+              {aiResults&&aiResults.length>0&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14}}>
+                <div style={{width:"100%"}}>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Detected {aiResults.length} item{aiResults.length!==1?"s":""}</div>
+                  <div style={{maxHeight:200,overflow:"auto",marginBottom:14}}>
+                    {aiResults.map((item,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px",marginBottom:6,background:"rgba(184,242,161,0.06)",border:"1px solid rgba(184,242,161,0.12)",borderRadius:12,animation:`fadeSlideIn 0.3s ease ${i*0.1}s both`}}>
+                      <div style={{flex:1}}><div style={{fontSize:14,fontWeight:500,color:"#fff"}}>{item.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:2}}>P:{item.protein||0}g · C:{item.carbs||0}g · F:{item.fat||0}g</div></div>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#b8f2a1"}}>{Math.round(item.calories)}</span>
+                        <button onClick={()=>addAiItem(item)} style={{background:"rgba(184,242,161,0.15)",border:"1px solid rgba(184,242,161,0.25)",borderRadius:8,color:"#b8f2a1",fontSize:16,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                      </div>
+                    </div>)}
+                  </div>
+                  <div style={{display:"flex",gap:12}}>
+                    <button onClick={closeCamera} style={{...btnStyle,flex:1,background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.6)"}}>Done</button>
+                    <button onClick={addAllAiItems} style={{...btnStyle,flex:2,background:"linear-gradient(135deg,#b8f2a1,#7ecba1)",color:"#0a0a0a"}}>Add All ({aiResults.reduce((s,i)=>s+Math.round(i.calories),0)} kcal)</button>
+                  </div>
                 </div>
-                <div style={{display:"flex",gap:12}}>
-                  <button onClick={closeCamera} style={{...btnStyle,flex:1,background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.6)"}}>Done</button>
-                  <button onClick={addAllAiItems} style={{...btnStyle,flex:2,background:"linear-gradient(135deg,#b8f2a1,#7ecba1)",color:"#0a0a0a"}}>Add All ({aiResults.reduce((s,i)=>s+Math.round(i.calories),0)} kcal)</button>
-                </div>
+                <button onClick={closeCamera} style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.5)",fontSize:20,transition:"all 0.2s"}}>✕</button>
               </div>}
-              {aiResults&&aiResults.length===0&&<div style={{textAlign:"center"}}><button onClick={closeCamera} style={{...btnStyle,background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.6)"}}>Close</button></div>}
+              {aiResults&&aiResults.length===0&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14}}>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.3)"}}>No food detected</div>
+                <button onClick={closeCamera} style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.5)",fontSize:20,transition:"all 0.2s"}}>✕</button>
+              </div>}
             </div>
           </div>
         )}
