@@ -304,8 +304,18 @@ function App() {
 
   const startEdit = (entry) => {
     setEditingEntry(entry.id);
-    setEditFields({name:entry.name,calories:String(entry.calories),protein:String(entry.protein||0),carbs:String(entry.carbs||0),fat:String(entry.fat||0)});
+    setEditFields({name:entry.name,calories:String(entry.calories),protein:String(entry.protein||0),carbs:String(entry.carbs||0),fat:String(entry.fat||0),autoCalc:false});
     setDeleteConfirm(null);
+  };
+  const updateEditMacro = (field, value) => {
+    setEditFields(p => {
+      const next = {...p, [field]: value, autoCalc: true};
+      const pr = Number(field==="protein"?value:next.protein)||0;
+      const ca = Number(field==="carbs"?value:next.carbs)||0;
+      const fa = Number(field==="fat"?value:next.fat)||0;
+      next.calories = String(Math.round(pr*4 + ca*4 + fa*9));
+      return next;
+    });
   };
   const saveEdit = () => {
     if(!editingEntry) return;
@@ -450,23 +460,26 @@ function App() {
                   <div style={{padding:"0 16px 14px",animation:"fadeIn 0.2s ease"}}>
                     <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:12}}>
                       <input value={editFields.name} onChange={ev=>setEditFields(p=>({...p,name:ev.target.value}))} placeholder="Food name" style={{...inputStyle,marginBottom:8,fontSize:13}} />
-                      <div style={{display:"flex",gap:6,marginBottom:8}}>
+                      <div style={{display:"flex",gap:6,marginBottom:4}}>
                         <div style={{flex:1}}>
-                          <div style={{fontSize:9,color:"#b8f2a1",letterSpacing:1,marginBottom:3}}>KCAL</div>
-                          <input type="number" value={editFields.calories} onChange={ev=>setEditFields(p=>({...p,calories:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                          <div style={{fontSize:9,color:"#b8f2a1",letterSpacing:1,marginBottom:3}}>KCAL {editFields.autoCalc&&<span style={{color:"rgba(184,242,161,0.4)"}}>●</span>}</div>
+                          <input type="number" value={editFields.calories} onChange={ev=>setEditFields(p=>({...p,calories:ev.target.value,autoCalc:false}))} style={{...inputStyle,fontSize:13,background:editFields.autoCalc?"rgba(184,242,161,0.06)":"rgba(255,255,255,0.06)"}} />
                         </div>
                         <div style={{flex:1}}>
                           <div style={{fontSize:9,color:"#a1d2f2",letterSpacing:1,marginBottom:3}}>PROTEIN</div>
-                          <input type="number" value={editFields.protein} onChange={ev=>setEditFields(p=>({...p,protein:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                          <input type="number" value={editFields.protein} onChange={ev=>updateEditMacro("protein",ev.target.value)} style={{...inputStyle,fontSize:13}} />
                         </div>
                         <div style={{flex:1}}>
                           <div style={{fontSize:9,color:"#f2d1a1",letterSpacing:1,marginBottom:3}}>CARBS</div>
-                          <input type="number" value={editFields.carbs} onChange={ev=>setEditFields(p=>({...p,carbs:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                          <input type="number" value={editFields.carbs} onChange={ev=>updateEditMacro("carbs",ev.target.value)} style={{...inputStyle,fontSize:13}} />
                         </div>
                         <div style={{flex:1}}>
                           <div style={{fontSize:9,color:"#f2a1c8",letterSpacing:1,marginBottom:3}}>FAT</div>
-                          <input type="number" value={editFields.fat} onChange={ev=>setEditFields(p=>({...p,fat:ev.target.value}))} style={{...inputStyle,fontSize:13}} />
+                          <input type="number" value={editFields.fat} onChange={ev=>updateEditMacro("fat",ev.target.value)} style={{...inputStyle,fontSize:13}} />
                         </div>
+                      </div>
+                      <div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginBottom:8,textAlign:"center"}}>
+                        {editFields.autoCalc?"Calories auto-calculated from macros":"Edit macros to auto-recalculate calories, or set calories manually"}
                       </div>
                       <div style={{display:"flex",gap:8}}>
                         <button onClick={()=>removeEntry(e.id)} style={{...btnStyle,flex:1,background:"rgba(255,107,107,0.1)",color:"#ff6b6b",border:"1px solid rgba(255,107,107,0.2)",padding:"10px 12px",fontSize:12}}>Delete</button>
@@ -512,10 +525,13 @@ function App() {
                 <input placeholder="Food name" value={customName} onChange={e=>setCustomName(e.target.value)} style={{...inputStyle,flex:2}} />
                 <input placeholder="Kcal" type="number" value={customCal} onChange={e=>setCustomCal(e.target.value)} style={{...inputStyle,flex:1}} />
               </div>
-              <div style={{display:"flex",gap:8,marginBottom:16}}>
-                <input placeholder="Protein (g)" type="number" value={customProtein} onChange={e=>setCustomProtein(e.target.value)} style={inputStyle} />
-                <input placeholder="Carbs (g)" type="number" value={customCarbs} onChange={e=>setCustomCarbs(e.target.value)} style={inputStyle} />
-                <input placeholder="Fat (g)" type="number" value={customFat} onChange={e=>setCustomFat(e.target.value)} style={inputStyle} />
+              <div style={{display:"flex",gap:8,marginBottom:4}}>
+                <input placeholder="Protein (g)" type="number" value={customProtein} onChange={e=>{setCustomProtein(e.target.value);const p=Number(e.target.value)||0,c=Number(customCarbs)||0,f=Number(customFat)||0;if(p||c||f)setCustomCal(String(Math.round(p*4+c*4+f*9)));}} style={inputStyle} />
+                <input placeholder="Carbs (g)" type="number" value={customCarbs} onChange={e=>{setCustomCarbs(e.target.value);const p=Number(customProtein)||0,c=Number(e.target.value)||0,f=Number(customFat)||0;if(p||c||f)setCustomCal(String(Math.round(p*4+c*4+f*9)));}} style={inputStyle} />
+                <input placeholder="Fat (g)" type="number" value={customFat} onChange={e=>{setCustomFat(e.target.value);const p=Number(customProtein)||0,c=Number(customCarbs)||0,f=Number(e.target.value)||0;if(p||c||f)setCustomCal(String(Math.round(p*4+c*4+f*9)));}} style={inputStyle} />
+              </div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.2)",marginBottom:12,textAlign:"center"}}>
+                {(Number(customProtein)||0)+(Number(customCarbs)||0)+(Number(customFat)||0)>0?"Calories auto-calculated from macros":"Enter macros to auto-calculate calories"}
               </div>
               <button onClick={addCustom} disabled={!customName||!customCal} style={{...btnStyle,width:"100%",background:customName&&customCal?"linear-gradient(135deg,#b8f2a1,#7ecba1)":"rgba(255,255,255,0.06)",color:customName&&customCal?"#0a0a0a":"rgba(255,255,255,0.2)"}}>Add Custom Food</button>
             </div>
